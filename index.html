@@ -1,9 +1,23 @@
 <!doctype html>
 <html>
 <head>
-<title>dawdaw</title>
+<title>&#9829;</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>nice site</h1>
+<script>
+    function pressme(){
+        var cont = document.getElementById('heart-container')
+        cont.style.display = 'flex';
+        var heart = document.getElementById('heart')
+        heart.style.height = 'auto'
+    }
+</script>
+<div id="heart-container">
+    <img src="favicon.png" id="heart">
+</div>
+<div id="navigatort" style="height: 30%;width: 100%">
+    <button  style="height: 100%;font-size: 2em;width: 100%;background: greenyellow;cursor: pointer;border-radius: 5px;border: greenyellow solid 1px" onclick="pressme()">evos are red, subarus are blue, when i see you my heart makes... ps: press me</button>
+</div>
 </body>
 </html>
