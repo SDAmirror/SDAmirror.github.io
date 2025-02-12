@@ -7,7 +7,10 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/static/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="/portfolio/static/main.css">
+    <link rel="stylesheet" href="/portfolio/static/parser.css">
+    <script src="/portfolio/static/main.js"></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -27,7 +30,116 @@
         </div>
         <div class="main-content">
 
+            <div class="control-panel" v-if="showControlPanel">
+                <div class="left control-box">
+                    <div class="input-box gap-box">
+                        <input class="control-element text-right" id="num-of-page" v-model="maximumPage">
+                        <span class="control-element" for="num-of-page">Number of pages to parse</span>
+                    </div>
+                    <div class="input-box gap-box">
+                        <input class="control-element text-right" id="start-from-page" v-model="lastPage">
+                        <span class="control-element" for="num-of-page">Starting page</span>
+                    </div>
+                    <div @click="getData" class="start-btn control-element text-center is-btn" style="position:relative;bottom: -60px;justify-content: center;align-items: center">start</div>
+                </div>
+                <div class="right control-box">
+                    <div class="check-group gap-box">
+                        <input type="checkbox" class="control-element control-checkbox is-btn" v-model="saveToStorage">
+                        <span class="control-element">Save data to local storage</span>
+                    </div>
+                    <div class="start-btn control-element is-btn" @click="exportData">Download excel</div>
+                    <div class="start-btn control-element is-btn" @click="exportJson">Download JSON</div>
+                    <div class="start-btn control-element is-btn" @click="clearLocalStorage">Clear local storage</div>
+                </div>
+            </div>
+            <br>
+            <div class="filter">
+                <div class="left control-box">
+                    <span class="control-element text-center">
+                        Countries
+                    </span>
+                    <select @change="fiterChanged" class="control-element" v-model="countryCode">
+                        <template v-for="c in countries" :key="c.id">
+                            <option class="control-element" :value="c.id">{{c.text}}</option>
+                        </template>
+                    </select>
+                </div>
+                <div class="mid control-box">
+                    <span class="control-element text-center">Age</span>
+                    <div class="min-max">
+                        <div class="age-input">
+                            <span>Min:</span>
+                            <input @change="fiterChanged" v-model="ageFilterMin">
+                        </div>
+                        <div class="age-input">
+                            <span>Max:</span>
+                            <input @change="fiterChanged" v-model="ageFilterMax">
+                        </div>
+
+                    </div>
+                </div>
+                <div class="right control-box">
+                    <span class="control-element text-center">
+                        Gender
+                    </span>
+                    <select @change="fiterChanged" class="control-element" v-model="filterGender">
+                        <template v-for="g in genders" :key="g.id">
+                            <option class="control-element" :value="g.id">{{g.name}}</option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+            <br>
+            <div class="paginate-panel-wraper">
+                <div class="paginate-panel">
+                    <button class="control-element" @click="currentPage = 1" :disabled="currentPage === 1">first</button>
+                    <button class="control-element" @click="currentPage = currentPage - 1" :disabled="currentPage === 1">prev</button>
+                    <template v-for="page in availablePages" :key="page">
+                        <button :class="{'cur-page': page === currentPage,'': page !== currentPage}" class="control-element page-btn" @click="currentPage = page">{{page}}</button>
+                    </template>
+                    <button class="control-element" @click="currentPage = currentPage + 1" :disabled="currentPage === Math.ceil(this.filteredSailingData.length / this.perPage)">next</button>
+                    <button class="control-element" @click="currentPage = Math.ceil(this.filteredSailingData.length / this.perPage)" :disabled="currentPage === Math.ceil(this.filteredSailingData.length / this.perPage)">last</button>
+                </div>
+            </div>
+            <table class="table b-table table-hover table-bordered table-sm b-table-no-border-collapse">
+                <thead>
+                    <tr>
+                        <td>name</td>
+                        <td>First name</td>
+                        <td>Last name</td>
+                        <td>Middle name</td>
+                        <td>Date of birth</td>
+                        <td>Gender</td>
+                        <td>Country</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template v-for="row of paginateTable">
+                        <tr>
+                            <td>{{row.name}}</td>
+                            <td>{{row.firstname}}</td>
+                            <td>{{row.lastname}}</td>
+                            <td>{{row.middlename}}</td>
+                            <td>{{row.birth_date}}</td>
+                            <td>{{row.gender_name}}</td>
+                            <td>{{row.nationality}}</td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
         </div>
+        <footer>
+            <template v-for="soc in social_medias" :key="soc.key">
+                <div class="contact-kart" @click="go_to(soc.link)">
+                    <div class="contact-logo">
+                        <img class="logo" :src="`/portfolio/static/socmedia/${soc.img}`">
+                    </div>
+                    <div class="contact-wraper">
+                        <span :class="soc.key">{{soc.username}}</span>
+                    </div>
+                </div>
+            </template>
+        </footer>
     </div>
 </div>
 
@@ -35,13 +147,264 @@
     const app = Vue.createApp({
         data() {
             return {
-                message: "Привет, Vue через CDN!"
+                countryCode: null,
+                filterGender: null,
+                countriesDict: {},
+                countriesList: [],
+                sailingData: [],
+                lastPage: 1,
+                maximumPage: 10,
+                saveToStorage: false,
+                showControlPanel: true,
+                perPage: 20,
+                limitPage: 7,
+                currentPage: 1,
+                social_medias: [
+                    {
+                        key: 'telegram',
+                        link: 'https://t.me/be7smart',
+                        label: 'telegram',
+                        username: 'be7smart',
+                        img: 'telegram.png'
+                    },
+                    {
+                        key: 'instagram',
+                        link: 'https://www.instagram.com/sda_jd',
+                        label: 'instagram',
+                        username: 'sda_jd',
+                        img: 'instagram.png'
+                    },
+                    {
+                        key: 'gmail',
+                        link: 'mailto:myvideoboxdsa@gmail.com',
+                        label: 'email',
+                        username: 'myvideoboxdsa@gmail.com',
+                        img: 'gmail.png'
+                    }
+                ],
+                ageFilterMin: 0,
+                ageFilterMax: 100,
             };
         },
         methods: {
-            changeMessage() {
-                this.message = "Текст изменён!";
+            log() {
+                console.log(this.countryCode)
+            },
+            fiterChanged() {
+                this.currentPage = 1
+            },
+            pageChanged() {
+                const mainConParent = document.getElementById('main-content');
+                if (mainConParent instanceof HTMLElement) {
+                    mainConParent.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            },
+            showdata() {
+                console.log(this.sailingData)
+            },
+            go_to(link) {
+                go_to(link)
+            },
+            async loadCountry() {
+                const response = await fetch('/portfolio/parser/countries.json');
+                const data = await response.json();
+                this.countriesDict = data.dict;
+                this.countriesList = data.list;
+            },
+            async getDataByPage(page) {
+                const url = "https://world-sailing-api.soticcloud.net/stats/api/sailor";
+                const params = new URLSearchParams({
+                    "filter[name]": "",
+                    "filter[primaryCountryId]": "",
+                    "filter[worldSailingId]": "",
+                    "filter[nonMember]": "0",
+                    "filterOptions[name]": "subString",
+                    "filterOptions[worldSailingId]": "subString",
+                    "include": "primaryCountry,images,user",
+                    "sort[lastName]": "asc",
+                    "page": page,
+                    "paginate": 20,
+                });
+
+                const headers = {
+                    "User-Agent": "Mozilla/5.0",
+                    "Accept": "application/json, text/plain, */*",
+                    "Referer": "https://www.sailing.org/",
+                };
+
+                try {
+                    let response = await fetch(url + "?" + params, { headers });
+                    return await response.json();
+                } catch (error) {
+                    console.error("Error fetching page", page, error);
+                    return [];
+                }
+            },
+            validateDate(dateStr) {
+                return !isNaN(Date.parse(dateStr));
+            },
+            extractSailing(data) {
+                if (!data || !data.data) return { objects: [], lastPage: 0 };
+
+                let objects = [];
+                let last_page = data.meta?.lastPage || 0;
+
+
+                data.data.forEach(el => {
+                    try {
+                        let obj = {
+                            user_id: el.userId,
+                            name: el.name || "",
+                            country_id: el.primaryCountryId || null,
+                            nationality: this.countriesDict[el.primaryCountryId]?.name || null,
+                            birth_date: this.validateDate(el.dateOfBirth) ? el.dateOfBirth : null,
+                            gender_id: el.gender?.id || null,
+                            gender_name: el.gender?.name || null,
+                            firstname: el.firstName || "",
+                            lastname: el.lastName || "",
+                            middlename: el.middleName || "",
+                            worldsailingid: el.worldSailingId || "",
+                        };
+                        objects.push(obj);
+                    } catch (err) {
+                        console.error("Error processing entry", err);
+                    }
+                });
+
+                return { objects, lastPage: last_page };
+            },
+            async getData() {
+                let page = Number(this.lastPage) + 1;
+                const endPage = parseInt(this.maximumPage) + page - 1;
+
+                while (page && page <= endPage) {
+                    let data = await this.getDataByPage(page);
+                    if (!data) break;
+
+                    let { objects, lastPage: newEndPage } = this.extractSailing(data);
+                    this.sailingData.push(...objects);
+
+
+                    if (this.saveToStorage) localStorage.setItem("lastPage", page);
+                    page++;
+                }
+                if (this.saveToStorage) localStorage.setItem("sailingData", JSON.stringify(this.sailingData));
+            },
+            exportData() {
+                const data = this.filteredSailingData
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+
+                XLSX.writeFile(wb, "data.xlsx");
+            },
+            exportJson() {
+                const data = this.filteredSailingData
+                const jsonData = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'data.json';
+                link.click();
+                link.remove()
+            },
+            clearLocalStorage() {
+                localStorage.removeItem('lastPage')
+                localStorage.removeItem('sailingData')
+                location.reload()
             }
+        },
+        computed: {
+            filteredSailingData () {
+                return this.sailingData
+                    .filter(v => (!this.filterGender) || (this.filterGender && v.gender_id === this.filterGender))
+                    .filter(v => (!this.countryCode) || (this.countryCode && v.country_id === this.countryCode))
+                    .filter((v) => {
+                        if (v.birth_date) {
+                            const birthDate = new Date(v.birth_date);
+
+                            // Get the current date
+                            const currentDate = new Date();
+
+                            // Calculate the age by comparing birth date and current date
+                            let age = currentDate.getFullYear() - birthDate.getFullYear();
+                            const monthDifference = currentDate.getMonth() - birthDate.getMonth();
+                            const dayDifference = currentDate.getDate() - birthDate.getDate();
+
+                            // Adjust age if the current date hasn't reached the birthday yet this year
+                            if (monthDifference < 0 || (monthDifference === 0 && dayDifference < 0)) {
+                                age--;
+                            }
+
+                            // Return true if age is within the specified range
+                            return age >= parseInt(this.ageFilterMin) && age <= parseInt(this.ageFilterMax);
+                        }
+                        return true
+                    })
+            },
+            paginateTable() {
+                const start = (this.currentPage - 1) * this.perPage
+                const end = start + this.perPage
+                return this.filteredSailingData.slice(start, end)
+            },
+            availablePages() {
+                const maxPage = Math.ceil(this.filteredSailingData.length / this.perPage);
+                if (maxPage <= 7) return Array.from({ length: maxPage }, (_, i) => i + 1);
+
+                if (this.currentPage <= 4) return [1, 2, 3, 4, 5, 6, 7];
+                if (this.currentPage >= maxPage - 3)
+                    return Array.from({ length: 7 }, (_, i) => maxPage - 6 + i);
+
+                return Array.from({ length: 7 }, (_, i) => this.currentPage - 3 + i);
+            },
+            countries () {
+                const res = [{
+                    "active": 1,
+                    "countryCode": "",
+                    "id": null,
+                    "name": "All",
+                    "text": "All"
+                }]
+                for (const c of this.countriesList) {
+                    res.push({...c, text: `${c.countryCode } - ${c.name }`})
+                }
+                return res
+            },
+            genders () {
+                const gender_ids = [null]
+                const genders = [{
+                    "id": null,
+                    "name": "All"
+                }]
+                for (const d of this.sailingData) {
+                    if (d.gender_id && !(gender_ids.includes(d.gender_id))) {
+                        genders.push({
+                            id: d.gender_id,
+                            name: d.gender_name
+                        })
+                        gender_ids.push(d.gender_id)
+                    }
+                }
+                return genders
+            }
+        },
+        async created() {
+            const telArr = [7,'*',4,'*',7,'*',2,'*',2,'*',9,'*',8,'*',2,'*',4,'*',7,'*']
+            const telTN = '+7'+ telArr.filter(v => typeof v === 'number').join('')
+            this.social_medias.push({
+                key: 'phone',
+                link: 'tel:'+telTN,
+                label: 'phone',
+                username: telTN,
+                img: 'phone.png'
+            })
+            await this.loadCountry()
+            this.lastPage = localStorage.getItem("lastPage") || 1;
+            let ls = localStorage.getItem("sailingData")
+            if (ls) {
+                ls = JSON.parse(ls)
+            }
+            this.sailingData = ls || [];
         }
     });
 
@@ -50,6 +413,4 @@
 </body>
 </html>
 
-<style>
-
-</style>
+<style></style>
