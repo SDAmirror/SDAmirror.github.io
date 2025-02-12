@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEMO PAGE</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/main.css">
+    <link rel="stylesheet" href="/static/kart.css">
+</head>
+<body>
+<div class="app" id="app">
+    <div class="main-container">
+        <div class="header">
+            <div class="logo__wraper">
+                <img class="logo" src="/portfolio/static/sam.png">
+            </div>
+            <ul class="nav nav-links">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/portfolio/index.html">Active</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/portfolio/parser.html">Link</a>
+                </li>
+            </ul>
+        </div>
+        <div class="main-content">
+            <div class="kart-list">
+                <template v-for="kart in langs_list" :key="kart.key">
+                    <div class="kart">
+                        <div class="kart-A">
+                            <img class="kart-img" :src="`/portfolio/static/langs/${kart.img}`">
+                            <div class="kart-label">
+                                <span>{{kart.label}}</span>
+                            </div>
+                        </div>
+                        <div class="kart-B">
+                            <div class="flip-kart-head">
+                                <img class="flip-kart-img" :src="`/portfolio/static/langs/${kart.img}`" alt="">
+                                <div class="kart-label">
+                                    <span>{{kart.label}}</span>
+                                </div>
+                            </div>
+                            <div class="kart-description">
+                                <p>{{kart.description}}</p>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </template>
+            </div>
+        </div>
+        <footer>
+            <template v-for="soc in social_medias" :key="soc.key">
+                <div class="contact-kart">
+                    <div class="contact-logo">
+                        <img class="logo" :src="`/portfolio/static/socmedia/${soc.img}`">
+                    </div>
+                    <div class="contact-wraper">
+                        <span :class="soc.key">{{soc.username}}</span>
+                    </div>
+                </div>
+            </template>
+        </footer>
+    </div>
+</div>
+
+<script>
+    const app = Vue.createApp({
+        data() {
+            return {
+                langs_: [
+                    'docker', 'excel', 'flask',
+                    'git', 'github', 'golang',
+                    'java', 'javascript', 'kali_linux',
+                    'linux', 'nmap', 'node_js',
+                    'postgresql', 'python', 'sass'
+                ],
+                langs_list: [],
+                skills: {
+                    docker: 'A platform that allows developers to package applications and their dependencies into containers. It ensures consistency across different environments and simplifies deployment.',
+                    excel: 'A spreadsheet program used to analyze and visualize data. It allows users to organize, calculate, and construct reports from various data sets for decision-making.',
+                    flask: 'A lightweight Python web framework used to build web applications. It is highly flexible and easy to use for developing small to medium-sized projects.',
+                    git: 'A version control system that tracks changes in code. It allows teams to collaborate efficiently, keep track of code versions, and manage project history.',
+                    github: 'A platform that hosts Git repositories. It enables developers to share and collaborate on code, offering tools for version control and project management.',
+                    golang: 'A programming language developed by Google known for its simplicity and efficiency in building fast, scalable systems. It’s widely used in cloud services and microservices.',
+                    java: 'A versatile, object-oriented programming language used for building large-scale applications. It is widely used in enterprise software and mobile development (especially Android).',
+                    javascript: 'A scripting language used to create dynamic and interactive content on websites. It powers frontend interactivity and is essential for modern web development.',
+                    kali_linux: 'A Debian-based Linux distribution used for penetration testing and security auditing. It comes with preinstalled tools for testing and securing systems.',
+                    linux: 'An open-source operating system that serves as the foundation for many software systems. It is known for its stability, security, and flexibility, often used for servers and development.',
+                    nmap: 'A network scanning tool used to discover devices on a network and assess their security. It is essential for network administrators and security professionals.',
+                    node_js: 'A JavaScript runtime environment used for building fast and scalable server-side applications. It is widely used for real-time applications and APIs.',
+                    postgresql: 'An open-source relational database management system. It supports advanced features like complex queries and transactions, making it ideal for large-scale applications.',
+                    python: 'A versatile programming language used for web development, data analysis, machine learning, and more. It is known for its readability and ease of use.',
+                    sass: 'A CSS preprocessor that extends CSS with variables, nested rules, and more. It simplifies writing and maintaining complex stylesheets for web development.'
+                },
+                social_medias: [
+                    {
+                        key: 'telegram',
+                        link: 'https://t.me/be7smart',
+                        label: 'telegram',
+                        username: 'be7smart',
+                        img: 'telegram.png'
+                    },
+                    {
+                        key: 'instagram',
+                        link: 'https://www.instagram.com/sda_jd',
+                        label: 'instagram',
+                        username: 'sda_jd',
+                        img: 'instagram.png'
+                    },
+                    {
+                        key: 'gmail',
+                        link: 'mailto:myvideoboxdsa@gmail.com',
+                        label: 'email',
+                        username: 'myvideoboxdsa@gmail.com',
+                        img: 'gmail.png'
+                    }
+                ]
+            };
+        },
+        methods: {
+            changeMessage() {
+                this.message = "Текст изменён!";
+            }
+        },
+        created() {
+            const telArr = [7,'*',4,'*',7,'*',2,'*',2,'*',9,'*',8,'*',2,'*',4,'*',7,'*']
+            const telTN = '+7'+ telArr.filter(v => typeof v === 'number').join('')
+            this.social_medias.push({
+                key: 'phone',
+                link: 'tel:'+telTN,
+                label: 'phone',
+                username: telTN,
+                img: 'phone.png'
+            })
+            for (const el of this.langs_) {
+                this.langs_list.push({
+                    key: el,
+                    label: el,
+                    img: el + '.png',
+                    flip: false,
+                    description: this.skills[el]
+                })
+            }
+            console.log(this.langs_list)
+        }
+    });
+
+    app.mount("#app");
+</script>
+</body>
+</html>
+
+<style>
+
+</style>
